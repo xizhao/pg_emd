@@ -1,3 +1,11 @@
+/// Complexity tests verifying paper claims:
+/// "Tree Embedding in High Dimensions: Dynamic and Massively Parallel"
+/// Goranci et al. (2025)
+///
+/// Paper claims:
+/// - Tree embedding with O(log n) distortion
+/// - Dynamic updates in Õ(n^ε) time where ε < 1
+
 use pg_emd::*;
 use std::time::Instant;
 
@@ -121,4 +129,100 @@ fn test_dimension_complexity_scaling() {
     assert!(final_ratio < d_multiplier * 2.0,
             "Time growing faster than O(d): {:.2}x vs expected {:.1}x",
             final_ratio, d_multiplier);
+}
+
+/// Test tree embedding distortion matches O(log n) from paper Theorem 1.1
+#[test]
+fn test_tree_embedding_distortion_bounds() {
+    println!("\n=== Tree Embedding Distortion Test (Theorem 1.1) ===");
+    println!("Paper claims: O(log n) distortion");
+    
+    let gamma = 1.5;
+    let aspect_ratio = 20.0;
+    let dimension = 1;
+    
+    let mut store = DynamicTreeEmbedding::new(gamma, aspect_ratio, dimension);
+    
+    // Create points at positions 0, 1, 2, ..., 9
+    let points: Vec<_> = (0..10)
+        .map(|i| store.insert(EuclideanPoint::new(vec![i as f64])))
+        .collect();
+    
+    let n = points.len();
+    let theoretical_max_distortion = gamma * (n as f64).log2();
+    
+    println!("n = {}, gamma = {}", n, gamma);
+    println!("Theoretical max distortion: O(log n) ≈ {:.2}", theoretical_max_distortion);
+    
+    let mut max_distortion: f64 = 0.0;
+    let mut total_distortion: f64 = 0.0;
+    let mut num_pairs = 0;
+    
+    for i in 0..points.len() {
+        for j in (i+1)..points.len() {
+            let euclidean_dist = (j - i) as f64;
+            if let Some(tree_dist) = store.tree_distance(points[i], points[j]) {
+                let distortion = tree_dist / euclidean_dist;
+                
+                max_distortion = max_distortion.max(distortion);
+                total_distortion += distortion;
+                num_pairs += 1;
+            }
+        }
+    }
+    
+    let avg_distortion = total_distortion / num_pairs as f64;
+    
+    println!("Average distortion: {:.2}", avg_distortion);
+    println!("Max distortion: {:.2}", max_distortion);
+    
+    // With proper parameters, should be within reasonable bounds
+    assert!(
+        avg_distortion < theoretical_max_distortion * 3.0,
+        "Average distortion {:.2} exceeds 3x theoretical {:.2}",
+        avg_distortion, theoretical_max_distortion
+    );
+    
+    println!("✓ Distortion within acceptable bounds");
+}
+
+/// Test EMD approximation quality matches O(log n) from Corollary 1.3
+#[test]
+fn test_emd_approximation_factor() {
+    println!("\n=== EMD Approximation Factor Test (Corollary 1.3) ===");
+    println!("Paper claims: O_ε(log n) approximation for EMD");
+    
+    let gamma = 1.5;
+    let n = 10;
+    let aspect_ratio = (n as f64) * 2.0;
+    
+    let mut store = DynamicTreeEmbedding::new(gamma, aspect_ratio, 1);
+    
+    let bins: Vec<_> = (0..n)
+        .map(|i| store.insert(EuclideanPoint::new(vec![i as f64])))
+        .collect();
+    
+    // Test: Moving point mass from position 0 to position (n-1)
+    // Exact EMD = (n-1) (distance × mass)
+    let dist_a = Distribution::new(vec![(bins[0], 1.0)]);
+    let dist_b = Distribution::new(vec![(bins[n-1], 1.0)]);
+    
+    let exact_emd = (n - 1) as f64;
+    let approx_emd = store.emd_distance(&dist_a, &dist_b);
+    let approx_factor = approx_emd / exact_emd;
+    
+    let theoretical_bound = gamma * (n as f64).log2();
+    
+    println!("Exact EMD: {}", exact_emd);
+    println!("Approx EMD: {}", approx_emd);
+    println!("Approximation factor: {:.2}x", approx_factor);
+    println!("Theoretical bound: O(log n) ≈ {:.2}", theoretical_bound);
+    
+    assert!(
+        approx_factor < theoretical_bound * 3.0,
+        "Approximation {:.2} exceeds 3x theoretical {:.2}",
+        approx_factor, theoretical_bound
+    );
+    
+    println!("✓ EMD approximation within O(log n) bounds");
 }

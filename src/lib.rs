@@ -65,7 +65,7 @@ pub mod dynamic;
 pub mod emd;
 
 // PostgreSQL extension module (only compiled when building with pgrx features)
-#[cfg(any(feature = "pg12", feature = "pg13", feature = "pg14", feature = "pg15", feature = "pg16", feature = "pg17"))]
+#[cfg(feature = "pg17")]
 pub mod pg_extension;
 
 pub use metric::{Point, EuclideanPoint};

@@ -256,3 +256,62 @@ fn test_clustering_quality() {
     assert!(between_clusters > within_cluster1,
         "Between-cluster distance should be larger than within-cluster");
 }
+
+/// Verify EMD symmetry property (required for distance metric)
+#[test]
+fn test_emd_symmetry_property() {
+    let gamma = 1.5;
+    let n = 5;
+    let aspect_ratio = (n as f64) * 2.0;
+    
+    let mut store = DynamicTreeEmbedding::new(gamma, aspect_ratio, 1);
+    
+    let bins: Vec<_> = (0..n)
+        .map(|i| store.insert(EuclideanPoint::new(vec![i as f64])))
+        .collect();
+    
+    let dist_a = Distribution::new(vec![(bins[0], 0.7), (bins[1], 0.3)]);
+    let dist_b = Distribution::new(vec![(bins[0], 0.3), (bins[1], 0.7)]);
+    
+    let emd_ab = store.emd_distance(&dist_a, &dist_b);
+    let emd_ba = store.emd_distance(&dist_b, &dist_a);
+    
+    assert!(
+        (emd_ab - emd_ba).abs() < 0.0001,
+        "EMD symmetry violated: {} != {}",
+        emd_ab, emd_ba
+    );
+}
+
+/// Verify triangle inequality is reasonably preserved
+#[test]
+fn test_triangle_inequality_approximate() {
+    let gamma = 1.5;
+    let n = 5;
+    let aspect_ratio = (n as f64) * 2.0;
+    
+    let mut store = DynamicTreeEmbedding::new(gamma, aspect_ratio, 1);
+    
+    let bins: Vec<_> = (0..n)
+        .map(|i| store.insert(EuclideanPoint::new(vec![i as f64])))
+        .collect();
+    
+    // EMD(A,C) should be ≤ EMD(A,B) + EMD(B,C)
+    // With tree approximation, may be violated by distortion factor
+    let dist_a = Distribution::new(vec![(bins[0], 1.0)]);
+    let dist_b = Distribution::new(vec![(bins[2], 1.0)]);
+    let dist_c = Distribution::new(vec![(bins[4], 1.0)]);
+    
+    let emd_ac = store.emd_distance(&dist_a, &dist_c);
+    let emd_ab = store.emd_distance(&dist_a, &dist_b);
+    let emd_bc = store.emd_distance(&dist_b, &dist_c);
+    
+    // May be violated but not by too much
+    let violation_ratio = emd_ac / (emd_ab + emd_bc);
+    
+    assert!(
+        violation_ratio < 10.0,
+        "Triangle inequality violated by too much: {:.2}x",
+        violation_ratio
+    );
+}

@@ -7,7 +7,7 @@
 -- EMD distance function for simple arrays
 CREATE FUNCTION emd(a double precision[], b double precision[])
 RETURNS double precision
-AS 'MODULE_PATHNAME', 'emd'
+AS 'MODULE_PATHNAME', 'emd_wrapper'
 LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 COMMENT ON FUNCTION emd IS 
@@ -18,7 +18,7 @@ Much faster than exact O(n³) Hungarian algorithm.';
 -- Weighted EMD function
 CREATE FUNCTION emd_weighted(dist_a json, dist_b json)
 RETURNS double precision
-AS 'MODULE_PATHNAME', 'emd_weighted'
+AS 'MODULE_PATHNAME', 'emd_weighted_wrapper'
 LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 COMMENT ON FUNCTION emd_weighted IS
@@ -28,7 +28,7 @@ Format: [{"point": [x, y, ...], "weight": w}, ...]';
 -- Tree distance function (for debugging/advanced use)
 CREATE FUNCTION tree_distance(a double precision[], b double precision[])
 RETURNS double precision
-AS 'MODULE_PATHNAME', 'tree_distance'
+AS 'MODULE_PATHNAME', 'tree_distance_wrapper'
 LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 COMMENT ON FUNCTION tree_distance IS
