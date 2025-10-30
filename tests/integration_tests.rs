@@ -1,4 +1,4 @@
-use adze_store::*;
+use pg_emd::*;
 
 #[test]
 fn test_static_embedding_distortion() {

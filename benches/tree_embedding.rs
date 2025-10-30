@@ -1,4 +1,4 @@
-use adze_store::*;
+use pg_emd::*;
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn benchmark_static_embedding(c: &mut Criterion) {

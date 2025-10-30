@@ -150,7 +150,7 @@ impl DynamicTreeEmbedding {
     /// 
     /// Returns minimum π-value among all points in buckets intersecting B(center, radius).
     /// Complexity: O(#nearby_buckets × avg_points_per_bucket) = O(n^ε) expected.
-    fn compute_label(&self, level: usize, center: &EuclideanPoint, radius: f64) -> Label {
+    pub(crate) fn compute_label(&self, level: usize, center: &EuclideanPoint, radius: f64) -> Label {
         let nearby_buckets = self.buckets_near_point(level, center, radius);
         
         let mut min_pi = f64::INFINITY;
@@ -383,7 +383,7 @@ impl DynamicTreeEmbedding {
         Some(dist)
     }
 
-    fn lowest_common_ancestor_level(&self, labels1: &[Label], labels2: &[Label]) -> usize {
+    pub(crate) fn lowest_common_ancestor_level(&self, labels1: &[Label], labels2: &[Label]) -> usize {
         for i in 0..labels1.len().min(labels2.len()) {
             if (labels1[i] - labels2[i]).abs() > 1e-10 {
                 return i;
@@ -396,6 +396,34 @@ impl DynamicTreeEmbedding {
         self.points.len()
     }
 
+    pub(crate) fn num_levels(&self) -> usize {
+        self.num_levels
+    }
+
+    pub(crate) fn aspect_ratio(&self) -> f64 {
+        self.aspect_ratio
+    }
+
+    pub(crate) fn beta(&self) -> f64 {
+        self.beta
+    }
+
+    pub(crate) fn gamma(&self) -> f64 {
+        self.gamma
+    }
+
+    pub(crate) fn get_point(&self, point_id: PointId) -> Option<&EuclideanPoint> {
+        self.points.get(&point_id)
+    }
+
+    pub(crate) fn points(&self) -> &HashMap<PointId, EuclideanPoint> {
+        &self.points
+    }
+
+    pub(crate) fn point_labels(&self, point_id: PointId) -> Option<&[Label]> {
+        self.labels.get(&point_id).map(|v| v.as_slice())
+    }
+
     pub fn debug_buckets_at_level(&self, level: usize, center: &EuclideanPoint) -> (usize, f64) {
         let w_i = self.aspect_ratio * 2.0_f64.powi(-(level as i32));
         let r_i = self.beta / self.gamma * w_i;
@@ -403,41 +431,7 @@ impl DynamicTreeEmbedding {
         (buckets.len(), r_i)
     }
 
-    /// Search for k nearest neighbors (brute-force O(n·d)).
-    ///
-    /// This is a simple implementation that computes exact Euclidean distances
-    /// to all points and returns the k closest.
-    ///
-    /// For a vector store, you'd want this! It's O(n·d) but guaranteed correct.
-    /// Could optimize later with tree-based search for O(k log n) expected time.
-    pub fn search_knn(&self, query: &EuclideanPoint, k: usize) -> Vec<(PointId, f64)> {
-        let mut distances: Vec<(PointId, f64)> = self.points
-            .iter()
-            .map(|(&id, point)| {
-                let dist = query.distance(point);
-                (id, dist)
-            })
-            .collect();
-        
-        distances.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-        distances.truncate(k);
-        distances
-    }
 
-    /// Search for all points within a given radius.
-    pub fn search_radius(&self, query: &EuclideanPoint, radius: f64) -> Vec<(PointId, f64)> {
-        self.points
-            .iter()
-            .filter_map(|(&id, point)| {
-                let dist = query.distance(point);
-                if dist <= radius {
-                    Some((id, dist))
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
 }
 
 #[cfg(test)]

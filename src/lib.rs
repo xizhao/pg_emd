@@ -1,8 +1,15 @@
-//! # Adze Store: Tree Embedding in High Dimensions
+//! # pg_drift: Dynamic Tree Embeddings for EMD
 //!
-//! Implementation of the dynamic tree embedding algorithm from the paper:
+//! Implementation of the dynamic tree embedding algorithm from:
 //! "Tree Embedding in High Dimensions: Dynamic and Massively Parallel"
 //! by Goranci et al. (arXiv:2510.22490, 2025)
+//!
+//! ## Purpose
+//!
+//! This library provides efficient data structures for:
+//! - **Earth Mover's Distance (EMD):** O(log n)-approximate EMD in O(n) time
+//! - **k-median clustering:** Dynamic clustering with Õ(n^ε) updates
+//! - **Metric optimization:** Transform hard metric problems to tree problems
 //!
 //! ## Algorithm Overview (Algorithm 1 from paper)
 //!
@@ -55,7 +62,9 @@ pub mod metric;
 pub mod hashing;
 pub mod tree_embedding;
 pub mod dynamic;
+pub mod emd;
 
 pub use metric::{Point, EuclideanPoint};
 pub use tree_embedding::TreeEmbedding;
 pub use dynamic::DynamicTreeEmbedding;
+pub use emd::Distribution;

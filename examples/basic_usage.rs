@@ -1,7 +1,7 @@
-use adze_store::*;
+use pg_emd::*;
 
 fn main() {
-    println!("=== Adze Store: Tree Embedding Examples ===\n");
+    println!("=== pg_emd: Tree Embedding for EMD Examples ===\n");
 
     static_embedding_example();
     println!();

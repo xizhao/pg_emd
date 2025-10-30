@@ -1,4 +1,4 @@
-use adze_store::*;
+use pg_emd::*;
 use std::time::Instant;
 
 #[test]

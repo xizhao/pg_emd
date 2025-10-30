@@ -1,7 +1,11 @@
 [package]
-name = "adze-store"
+name = "pg_emd"
 version = "0.1.0"
 edition = "2021"
+description = "Fast approximate Earth Mover's Distance using dynamic tree embeddings""
+repository = "https://github.com/xizhao/pg_emd"
+keywords = ["earth-movers-distance", "emd", "tree-embedding", "postgres", "metric"]
+categories = ["algorithms", "database"]
 
 [dependencies]
 rand = "0.8"
