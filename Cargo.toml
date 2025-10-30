@@ -13,3 +13,7 @@ criterion = "0.5"
 [[bench]]
 name = "tree_embedding"
 harness = false
+
+[[bench]]
+name = "optimization_verify"
+harness = false
