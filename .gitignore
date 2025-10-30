@@ -1,0 +1,32 @@
+# Rust/Cargo
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# Benchmark results
+/target/criterion/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation build
+/target/doc/
+
+# Test coverage
+*.profraw
+*.profdata
+coverage/
+
+# Local configuration
+.env
+.env.local
+
+# Paper PDF (already have it)
+paper.pdf
+paper.txt
