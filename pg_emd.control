@@ -1,0 +1,6 @@
+# pg_emd extension
+comment = 'Fast approximate Earth Mover''s Distance using dynamic tree embeddings'
+default_version = '0.1.0'
+module_pathname = '$libdir/pg_emd'
+relocatable = true
+trusted = true
