@@ -67,6 +67,62 @@ impl GridHash {
         hash
     }
 
+    pub fn enumerate_buckets_in_ball(&self, center: &EuclideanPoint, radius: f64) -> Vec<BucketId> {
+        let center_coords = self.grid_coords(center);
+        let cells_radius = ((radius / self.cell_size).ceil() as i64) + 1;
+        
+        let mut result = Vec::new();
+        self.enumerate_with_filter(&center_coords, cells_radius, 0, &mut vec![0; self.dimension], center, radius, &mut result);
+        result
+    }
+
+    fn enumerate_with_filter(
+        &self,
+        center_coords: &[i64],
+        radius: i64,
+        dim: usize,
+        current: &mut Vec<i64>,
+        query_center: &EuclideanPoint,
+        query_radius: f64,
+        result: &mut Vec<BucketId>,
+    ) {
+        if dim == self.dimension {
+            // Check if this bucket actually intersects the L2 ball
+            if self.bucket_coords_intersect_ball(current, query_center, query_radius) {
+                result.push(self.coords_to_id(current));
+            }
+            return;
+        }
+
+        let center_coord = center_coords[dim];
+        for offset in -radius..=radius {
+            current[dim] = center_coord + offset;
+            self.enumerate_with_filter(center_coords, radius, dim + 1, current, query_center, query_radius, result);
+        }
+    }
+
+    fn bucket_coords_intersect_ball(&self, coords: &[i64], center: &EuclideanPoint, radius: f64) -> bool {
+        let mut dist_sq = 0.0;
+        
+        for (i, &k) in coords.iter().enumerate() {
+            let box_min = k as f64 * self.cell_size - self.offset[i];
+            let box_max = (k + 1) as f64 * self.cell_size - self.offset[i];
+            let center_coord = center.coords()[i];
+
+            let closest = if center_coord < box_min {
+                box_min
+            } else if center_coord > box_max {
+                box_max
+            } else {
+                center_coord
+            };
+
+            dist_sq += (center_coord - closest).powi(2);
+        }
+        
+        dist_sq.sqrt() <= radius
+    }
+
     /// Tests if the bucket containing `point` intersects the ball B(center, radius).
     ///
     /// This is the key operation for computing B̃(p, r) efficiently:

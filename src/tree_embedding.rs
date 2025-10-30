@@ -138,8 +138,14 @@ impl TreeEmbedding {
 
     pub fn tree_distance(&self, labels1: &[Label], labels2: &[Label]) -> f64 {
         let lv = self.lowest_common_ancestor_level(labels1, labels2);
-        let w_lv = self.aspect_ratio * 2.0_f64.powi(-(lv as i32));
-        2.0 * w_lv
+        
+        // From paper equation (3): dist_T(p,q) = sum_{i=lv}^m of 2*w_i
+        let mut dist = 0.0;
+        for i in lv..self.num_levels {
+            let w_i = self.aspect_ratio * 2.0_f64.powi(-(i as i32));
+            dist += 2.0 * w_i;
+        }
+        dist
     }
 
     fn lowest_common_ancestor_level(&self, labels1: &[Label], labels2: &[Label]) -> usize {
