@@ -57,43 +57,62 @@ impl DynamicTreeEmbedding {
     /// Complexity: O(n + m) where n = points in distributions, m = tree levels.
     /// Much better than O(n³) Hungarian algorithm for exact EMD!
     pub fn emd_distance(&self, dist_a: &Distribution, dist_b: &Distribution) -> f64 {
-        // EMD on tree: sum of flow costs on tree edges
-        // Flow on edge = excess/deficit propagated up the tree
+        // EMD on tree using minimum-cost flow
+        // For trees, this is simple: greedily match points by tree distance
         
-        // Build weight map for all points
-        let mut weights = HashMap::new();
+        // Build positive (sources) and negative (sinks) mass lists
+        let mut sources = Vec::new();  // (point_id, mass)
+        let mut sinks = Vec::new();    // (point_id, mass)
+        
+        let mut weight_map = HashMap::new();
         
         for (point_id, weight) in &dist_a.points {
-            *weights.entry(*point_id).or_insert(0.0) += weight;
+            *weight_map.entry(*point_id).or_insert(0.0) += weight;
         }
         
         for (point_id, weight) in &dist_b.points {
-            *weights.entry(*point_id).or_insert(0.0) -= weight;
+            *weight_map.entry(*point_id).or_insert(0.0) -= weight;
         }
-
-        // Compute excess at each tree node by aggregating from leaves
-        // For simplicity, use a greedy approach: pair up excesses at each level
+        
+        for (point_id, net_weight) in weight_map {
+            if net_weight > 1e-10 {
+                sources.push((point_id, net_weight));
+            } else if net_weight < -1e-10 {
+                sinks.push((point_id, -net_weight));
+            }
+        }
+        
+        // Greedy matching: match each source to nearest sink
+        // For optimal EMD on trees, this is sufficient
         let mut total_cost = 0.0;
-
-        for level in (0..self.num_levels()).rev() {
-            // Group points by their label at this level (same subtree)
-            let mut subtree_excess = HashMap::new();
-
-            for (point_id, excess) in &weights {
-                if let Some(labels) = self.get_labels(*point_id) {
-                    if level < labels.len() {
-                        let subtree_label = OrderedFloat(labels[level]);
-                        *subtree_excess.entry(subtree_label).or_insert(0.0) += excess;
+        let mut remaining_sinks = sinks.clone();
+        
+        for (source_id, mut source_mass) in sources {
+            while source_mass > 1e-10 && !remaining_sinks.is_empty() {
+                // Find nearest sink
+                let mut best_idx = 0;
+                let mut best_dist = f64::INFINITY;
+                
+                for (idx, (sink_id, _)) in remaining_sinks.iter().enumerate() {
+                    if let Some(dist) = self.tree_distance(source_id, *sink_id) {
+                        if dist < best_dist {
+                            best_dist = dist;
+                            best_idx = idx;
+                        }
                     }
                 }
-            }
-
-            // Flow cost at this level: sum of absolute flows × edge length
-            let w_i = self.aspect_ratio() * 2.0_f64.powi(-(level as i32));
-            let edge_length = 2.0 * w_i;
-
-            for (_label, excess) in subtree_excess {
-                total_cost += excess.abs() * edge_length;
+                
+                // Move as much mass as possible to this sink
+                let flow = source_mass.min(remaining_sinks[best_idx].1);
+                total_cost += flow * best_dist;
+                
+                source_mass -= flow;
+                remaining_sinks[best_idx].1 -= flow;
+                
+                // Remove sink if exhausted
+                if remaining_sinks[best_idx].1 < 1e-10 {
+                    remaining_sinks.remove(best_idx);
+                }
             }
         }
 

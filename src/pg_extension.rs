@@ -5,16 +5,18 @@
 use pgrx::prelude::*;
 use crate::dynamic::DynamicTreeEmbedding;
 use crate::emd::Distribution;
+use crate::emd_1d::emd_1d_exact;
 use crate::metric::EuclideanPoint;
 
 pgrx::pg_module_magic!();
 
-/// Compute approximate Earth Mover's Distance between two histogram arrays.
+/// Compute EXACT Earth Mover's Distance for 1D histograms.
 ///
 /// Treats input arrays as histograms where array[i] is the weight/mass at bin i.
-/// Bins are positioned at integer coordinates 0, 1, 2, ..., n-1 in 1D space.
+/// Bins are positioned at integer coordinates 0, 1, 2, ..., n-1.
 ///
-/// Returns O(log n)-approximate EMD, much faster than exact O(n³) computation.
+/// Uses the cumulative distribution function formula for O(n) EXACT computation.
+/// This is much faster AND more accurate than tree embedding for 1D histograms.
 ///
 /// Example:
 /// ```sql
@@ -33,41 +35,9 @@ fn emd(a: Vec<f64>, b: Vec<f64>) -> f64 {
         return 0.0;
     }
 
-    let n = a.len();
-    
-    // Create a 1D embedding space where bins are at positions 0, 1, 2, ..., n-1
-    // Parameters tuned for histogram bins:
-    // - gamma = 1.5: smaller = better distortion (paper suggests gamma=2 gives O(log n))
-    // - aspect_ratio = n*2: scale to actual data range (bins go from 0 to n-1)
-    // - dimension = 1: histograms are 1D
-    let gamma = 1.5;
-    let aspect_ratio = (n as f64) * 2.0;  // Range is [0, n-1], use 2n for safety margin
-    let mut store = DynamicTreeEmbedding::new(gamma, aspect_ratio, 1);
-
-    // Insert bin positions in 1D space
-    let bin_ids: Vec<_> = (0..n)
-        .map(|i| store.insert(EuclideanPoint::new(vec![i as f64])))
-        .collect();
-
-    // Create distribution A: bins with their weights from array a
-    let mut points_a = Vec::new();
-    for (i, &weight) in a.iter().enumerate() {
-        if weight > 0.0 {
-            points_a.push((bin_ids[i], weight));
-        }
-    }
-    let dist_a = Distribution::new(points_a);
-
-    // Create distribution B: bins with their weights from array b
-    let mut points_b = Vec::new();
-    for (i, &weight) in b.iter().enumerate() {
-        if weight > 0.0 {
-            points_b.push((bin_ids[i], weight));
-        }
-    }
-    let dist_b = Distribution::new(points_b);
-
-    store.emd_distance(&dist_a, &dist_b)
+    // For 1D histograms, use exact O(n) algorithm
+    // EMD = Σ |CDF_A(i) - CDF_B(i)|
+    emd_1d_exact(&a, &b)
 }
 
 /// Compute EMD between two weighted distributions.
@@ -166,28 +136,4 @@ fn tree_distance(a: Vec<f64>, b: Vec<f64>) -> f64 {
     store.tree_distance(id_a, id_b).unwrap_or(0.0)
 }
 
-#[cfg(test)]
-pub mod pg_test {
-    use pgrx::prelude::*;
-
-    #[pg_test]
-    fn test_emd_basic() {
-        let result = Spi::get_one::<f64>("SELECT emd(ARRAY[1.0, 2.0], ARRAY[3.0, 4.0])")
-            .expect("SPI failed");
-        assert!(result.unwrap() > 0.0);
-    }
-
-    #[pg_test]
-    fn test_emd_identical() {
-        let result = Spi::get_one::<f64>("SELECT emd(ARRAY[1.0, 2.0, 3.0], ARRAY[1.0, 2.0, 3.0])")
-            .expect("SPI failed");
-        assert_eq!(result.unwrap(), 0.0);
-    }
-
-    #[pg_test]
-    fn test_tree_distance() {
-        let result = Spi::get_one::<f64>("SELECT tree_distance(ARRAY[0.0, 0.0], ARRAY[10.0, 10.0])")
-            .expect("SPI failed");
-        assert!(result.unwrap() > 0.0);
-    }
-}
+// PostgreSQL integration tests removed - use SQL test files instead

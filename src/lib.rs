@@ -63,6 +63,7 @@ pub mod hashing;
 pub mod tree_embedding;
 pub mod dynamic;
 pub mod emd;
+pub mod emd_1d;
 
 // PostgreSQL extension module (only compiled when building with pgrx features)
 #[cfg(feature = "pg17")]

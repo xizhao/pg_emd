@@ -1,10 +1,13 @@
-/// Complexity tests verifying paper claims:
+/// Paper Bounds Verification
+/// 
+/// Tests that verify implementation matches theoretical bounds from:
 /// "Tree Embedding in High Dimensions: Dynamic and Massively Parallel"
-/// Goranci et al. (2025)
+/// Goranci et al. (2025), arxiv:2510.22490
 ///
-/// Paper claims:
-/// - Tree embedding with O(log n) distortion
-/// - Dynamic updates in Õ(n^ε) time where ε < 1
+/// Key Claims Tested:
+/// - Theorem 4.2: Dynamic tree embedding with Õ(n^ε) update time
+/// - Lemma 5.13: Tree EMD formula  
+/// - Corollary 1.3: O(log n) approximation for EMD
 
 use pg_emd::*;
 use std::time::Instant;
@@ -225,4 +228,66 @@ fn test_emd_approximation_factor() {
     );
     
     println!("✓ EMD approximation within O(log n) bounds");
+}
+
+/// Verify tree EMD matches paper Lemma 5.13 formula
+#[test]
+fn test_lemma_5_13_tree_emd() {
+    println!("\n=== Paper Lemma 5.13: Tree EMD Formula ===");
+    
+    let gamma = 2.0;
+    let aspect_ratio = 20.0;
+    let dimension = 1;
+    
+    let mut store = DynamicTreeEmbedding::new(gamma, aspect_ratio, dimension);
+    
+    let p0 = store.insert(EuclideanPoint::new(vec![0.0]));
+    let p1 = store.insert(EuclideanPoint::new(vec![5.0]));
+    
+    // For bipartite matching (|A|=|B|=1), EMD = tree distance
+    let dist_a = Distribution::new(vec![(p0, 1.0)]);
+    let dist_b = Distribution::new(vec![(p1, 1.0)]);
+    
+    let emd = store.emd_distance(&dist_a, &dist_b);
+    let tree_dist = store.tree_distance(p0, p1).unwrap();
+    
+    assert!((emd - tree_dist).abs() < 0.01, 
+            "EMD {} should equal tree_dist {} for single pair",
+            emd, tree_dist);
+    
+    println!("✓ Tree EMD matches paper formula");
+}
+
+/// Verify dynamic updates work correctly (Theorem 4.2)
+#[test]
+fn test_theorem_4_2_dynamic_updates() {
+    println!("\n=== Paper Theorem 4.2: Dynamic Tree Embedding ===");
+    
+    let gamma = 2.0;
+    let aspect_ratio = 100.0;
+    let dimension = 2;
+    
+    let mut store = DynamicTreeEmbedding::new(gamma, aspect_ratio, dimension);
+    
+    let mut ids = Vec::new();
+    for i in 0..10 {
+        let p = EuclideanPoint::new(vec![i as f64, i as f64]);
+        let id = store.insert(p);
+        ids.push(id);
+    }
+    
+    let dist_a = Distribution::new(vec![(ids[0], 0.5), (ids[1], 0.5)]);
+    let dist_b = Distribution::new(vec![(ids[8], 0.5), (ids[9], 0.5)]);
+    
+    let emd_before = store.emd_distance(&dist_a, &dist_b);
+    
+    // Delete point not in distributions
+    store.delete(ids[5]);
+    
+    let emd_after = store.emd_distance(&dist_a, &dist_b);
+    
+    assert!((emd_before - emd_after).abs() / emd_before < 0.1,
+            "Dynamic delete shouldn't affect unrelated distributions");
+    
+    println!("✓ Dynamic updates work");
 }

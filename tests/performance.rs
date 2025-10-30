@@ -1,3 +1,12 @@
+/// Performance Tests
+///
+/// Validates implementation optimizations:
+/// - Spatial indexing for nearest neighbor queries
+/// - Bucket filtering to reduce candidate points
+/// - Label caching for repeated queries
+///
+/// Each test verifies optimization doesn't break correctness.
+
 use pg_emd::*;
 use std::time::Instant;
 

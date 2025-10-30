@@ -1,3 +1,11 @@
+/// Tree Embedding Tests
+///
+/// Tests for the core tree embedding algorithm (not EMD-specific):
+/// - Distortion bounds: tree_dist ≤ euclidean_dist × O(log n)
+/// - Dynamic operations: insert, delete maintain embedding
+/// - High-dimensional support
+/// - Metric properties preservation
+
 use pg_emd::*;
 
 #[test]
